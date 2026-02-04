@@ -1,83 +1,199 @@
-# Deployment Guide
+# Деплой MapPrompt Backend API
 
-## Railway.app Setup
+## 🚂 Railway.app (Рекомендуется)
 
-### Step 1: Create GitHub Repository
-Repository already created and pushed to GitHub.
+### Метод 1: Через GitHub
 
-### Step 2: Deploy to Railway
-
-1. **Sign up** at https://railway.app (use GitHub login)
-2. Click **"New Project"**
-3. Select **"Deploy from GitHub repo"**
-4. Choose repository: `n07name7/mapprompt-backend`
-5. Railway will auto-detect Node.js and deploy automatically
-
-### Step 3: Configure Environment Variables
-
-In Railway dashboard, add these variables:
-
+1. **Подготовь репозиторий**
+```bash
+cd /home/ivan/clawd/projects/mapprompt-backend
+git init
+git add .
+git commit -m "Initial commit: MapPrompt Backend API"
 ```
+
+2. **Запуш на GitHub**
+```bash
+# Создай репозиторий на GitHub (https://github.com/new)
+git remote add origin https://github.com/YOUR_USERNAME/mapprompt-backend.git
+git branch -M main
+git push -u origin main
+```
+
+3. **Задеплой на Railway**
+   - Зайди на [railway.app](https://railway.app)
+   - **New Project** → **Deploy from GitHub repo**
+   - Выбери `mapprompt-backend`
+   - Railway автоматически развернёт проект
+   - Получишь URL типа: `https://mapprompt-backend-production.up.railway.app`
+
+### Метод 2: Через Railway CLI
+
+```bash
+# Установи Railway CLI
+npm install -g @railway/cli
+
+# Залогинься
+railway login
+
+# Инициализируй проект
+cd /home/ivan/clawd/projects/mapprompt-backend
+railway init
+
+# Задеплой
+railway up
+```
+
+### Проверка деплоя
+```bash
+# Замени URL на свой Railway URL
+curl https://your-project.up.railway.app/health
+
+# Тестируй геокодирование
+curl -X POST https://your-project.up.railway.app/api/geocode \
+  -H "Content-Type: application/json" \
+  -d '{"addresses": ["Václavské náměstí, Praha"]}'
+```
+
+---
+
+## 🎨 Render.com (Альтернатива)
+
+1. **Зайди на** [render.com](https://render.com)
+2. **New** → **Web Service**
+3. **Connect GitHub** репозиторий
+4. **Настройки:**
+   - Name: `mapprompt-backend`
+   - Environment: `Node`
+   - Build Command: `npm install`
+   - Start Command: `npm start`
+   - Instance Type: `Free`
+5. **Create Web Service**
+
+---
+
+## 🐳 Docker (Если нужен)
+
+### Dockerfile
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
+```
+
+### Docker Compose
+```yaml
+version: '3.8'
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+    restart: unless-stopped
+```
+
+### Запуск
+```bash
+docker build -t mapprompt-backend .
+docker run -p 3000:3000 mapprompt-backend
+```
+
+---
+
+## ⚙️ Переменные окружения
+
+### Railway/Render
+В настройках проекта добавь:
+```
+PORT=3000  # Railway автоматически установит свой порт
 NODE_ENV=production
-PORT=3000
-CORS_ORIGIN=https://n07name7.github.io
 ```
 
-### Step 4: Get Production URL
-
-After deployment, Railway will provide a URL like:
+### Local
+Скопируй `.env.example` в `.env`:
+```bash
+cp .env.example .env
 ```
-https://mapprompt-backend-production.up.railway.app
-```
-
-Copy this URL — you'll need it to update the frontend.
 
 ---
 
-## How to Update
+## 🔧 После деплоя
 
-1. Push changes to `main` branch on GitHub
-2. Railway auto-deploys (watch logs in dashboard)
-
----
-
-## Monitoring
-
-- **Logs:** Railway dashboard → your project → Deployments
-- **Health check:** `https://your-app.railway.app/health`
-
----
-
-## API Endpoints
-
-- `POST /api/geocode` - Geocode addresses using Mapy.cz
-- `GET /health` - Health check endpoint
-
----
-
-## Frontend Integration
-
-After getting the Railway URL, update frontend `.env`:
-
-```
-VITE_API_URL=https://your-railway-url.railway.app
+### 1. Обнови CORS в `server.js`
+```js
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://n07name7.github.io',
+    'https://your-railway-url.up.railway.app'  // ✅ Добавь свой URL
+  ]
+}));
 ```
 
-Then rebuild and redeploy frontend.
+### 2. Закоммить изменения
+```bash
+git add server.js
+git commit -m "Update CORS origins"
+git push
+```
+
+Railway автоматически задеплоит новую версию.
 
 ---
 
-## Troubleshooting
+## 📊 Мониторинг
 
-**Problem:** App crashes on Railway
-- Check logs in Railway dashboard
-- Verify environment variables are set
-- Ensure `npm start` works locally
+### Railway Dashboard
+- **Логи:** https://railway.app → твой проект → Deployments → Logs
+- **Метрики:** CPU, Memory, Network usage
+- **URL:** Копируй публичный URL из Settings
 
-**Problem:** CORS errors
-- Add your frontend URL to `CORS_ORIGIN` environment variable
-- Restart the Railway deployment
+### Health Check
+Добавь в мониторинг (Uptime Robot, Pingdom):
+```
+https://your-url.up.railway.app/health
+```
 
-**Problem:** Health check fails
-- Visit `/health` endpoint directly
-- Check Railway logs for startup errors
+---
+
+## 💰 Лимиты бесплатных планов
+
+### Railway
+- **$5 бесплатно каждый месяц** (500 часов)
+- После исчерпания - платно ($0.01/час)
+
+### Render
+- **750 часов/месяц бесплатно**
+- Sleep после 15 минут неактивности (первый запрос медленный)
+
+---
+
+## 🚀 Готово!
+
+После деплоя твой API будет доступен по публичному URL. Используй его во фронтенде:
+
+```js
+const API_URL = 'https://your-railway-url.up.railway.app';
+
+const response = await fetch(`${API_URL}/api/geocode`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    addresses: ['Václavské náměstí, Praha'] 
+  })
+});
+
+const data = await response.json();
+console.log(data.results);
+```
