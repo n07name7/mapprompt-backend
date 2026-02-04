@@ -8,8 +8,23 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.CORS_ORIGIN || 'https://n07name7.github.io'
+].filter(Boolean);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://n07name7.github.io']
+  origin: function(origin, callback) {
+    // Разрешить запросы без origin (например, curl или Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`❌ CORS blocked: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
 }));
 
 app.use(express.json());
