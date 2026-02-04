@@ -36,12 +36,21 @@ router.post('/', async (req, res) => {
           geocodeResult.data.lon
         );
 
+        // Определяем статус POI
+        const hasPOI = poi.transport.length > 0 || poi.schools.length > 0 || poi.shops.length > 0;
+        const poiStatus = hasPOI ? 'available' : 'unavailable';
+
+        if (!hasPOI) {
+          console.log(`[POI] No POI found for address: "${address}" (${geocodeResult.data.lat}, ${geocodeResult.data.lon})`);
+        }
+
         results.push({
           address,
           status: 'success',
           data: {
             ...geocodeResult.data,
-            poi_nearby: poi
+            poi_nearby: hasPOI ? poi : null,
+            poi_status: poiStatus
           }
         });
       } else {
