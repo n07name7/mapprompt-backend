@@ -7,34 +7,11 @@ const OVERPASS_ENDPOINTS = [
   'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
 ];
 
-const RADIUS = 1000; // метры (увеличено с 500 до 1000)
 const MAX_RETRIES = 3;
 
 // In-memory кэш
 const cache = new Map();
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 часа
-
-/**
- * Проверить кэш для координат
- */
-function getCachedPOI(lat, lon) {
-  const key = `${lat.toFixed(4)},${lon.toFixed(4)}`; // округление до ~10м точности
-  const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    console.log(`[Cache HIT] ${key}`);
-    return cached.data;
-  }
-  return null;
-}
-
-/**
- * Сохранить результат в кэш
- */
-function setCachedPOI(lat, lon, data) {
-  const key = `${lat.toFixed(4)},${lon.toFixed(4)}`;
-  cache.set(key, { data, timestamp: Date.now() });
-  console.log(`[Cache SET] ${key}`);
-}
 
 /**
  * Sleep helper для retry логики
@@ -98,24 +75,27 @@ async function fetchWithRetryAndFallback(query) {
  * Получить POI вокруг координаты
  * @param {number} lat - Широта
  * @param {number} lon - Долгота
+ * @param {number} radius - Радиус поиска в метрах (по умолчанию 1000)
  * @returns {Promise<Object>} - Объект с категориями POI
  */
-async function getPOINearby(lat, lon) {
-  // Проверяем кэш
-  const cached = getCachedPOI(lat, lon);
-  if (cached) {
-    return cached;
+async function getPOINearby(lat, lon, radius = 1000) {
+  // Проверяем кэш (с учётом радиуса)
+  const cacheKey = `${lat.toFixed(4)},${lon.toFixed(4)},${radius}`;
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`[Cache HIT] ${cacheKey}`);
+    return cached.data;
   }
 
   const query = `
     [out:json][timeout:10];
     (
-      node["amenity"="school"](around:${RADIUS},${lat},${lon});
-      node["shop"="supermarket"](around:${RADIUS},${lat},${lon});
-      node["public_transport"="stop_position"](around:${RADIUS},${lat},${lon});
-      node["highway"="bus_stop"](around:${RADIUS},${lat},${lon});
-      node["railway"="station"](around:${RADIUS},${lat},${lon});
-      node["railway"="halt"](around:${RADIUS},${lat},${lon});
+      node["amenity"="school"](around:${radius},${lat},${lon});
+      node["shop"="supermarket"](around:${radius},${lat},${lon});
+      node["public_transport"="stop_position"](around:${radius},${lat},${lon});
+      node["highway"="bus_stop"](around:${radius},${lat},${lon});
+      node["railway"="station"](around:${radius},${lat},${lon});
+      node["railway"="halt"](around:${radius},${lat},${lon});
     );
     out body;
   `;
@@ -131,7 +111,8 @@ async function getPOINearby(lat, lon) {
     };
 
     // Сохраняем в кэш
-    setCachedPOI(lat, lon, result);
+    cache.set(cacheKey, { data: result, timestamp: Date.now() });
+    console.log(`[Cache SET] ${cacheKey}`);
 
     return result;
   } catch (error) {

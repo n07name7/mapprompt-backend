@@ -10,7 +10,7 @@ const router = express.Router();
  */
 router.post('/', async (req, res) => {
   try {
-    const { addresses } = req.body;
+    const { addresses, radius = 1000 } = req.body;
 
     if (!addresses || !Array.isArray(addresses) || addresses.length === 0) {
       return res.status(400).json({
@@ -30,10 +30,11 @@ router.post('/', async (req, res) => {
       const geocodeResult = await geocodeAddress(address);
 
       if (geocodeResult.status === 'success') {
-        // Получаем POI вокруг найденной точки
+        // Получаем POI вокруг найденной точки с указанным радиусом
         const poi = await getPOINearby(
           geocodeResult.data.lat,
-          geocodeResult.data.lon
+          geocodeResult.data.lon,
+          radius
         );
 
         // Определяем статус POI
@@ -41,7 +42,7 @@ router.post('/', async (req, res) => {
         const poiStatus = hasPOI ? 'available' : 'unavailable';
 
         if (!hasPOI) {
-          console.log(`[POI] No POI found for address: "${address}" (${geocodeResult.data.lat}, ${geocodeResult.data.lon})`);
+          console.log(`[POI] No POI found for address: "${address}" (${geocodeResult.data.lat}, ${geocodeResult.data.lon}) radius: ${radius}m`);
         }
 
         results.push({
@@ -49,6 +50,7 @@ router.post('/', async (req, res) => {
           status: 'success',
           data: {
             ...geocodeResult.data,
+            search_radius: radius,
             poi_nearby: hasPOI ? poi : null,
             poi_status: poiStatus
           }
