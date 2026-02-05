@@ -81,19 +81,13 @@ exports.handler = async (event, context) => {
       if (geocodeResult.status === 'success') {
         const { lat, lon } = geocodeResult.data;
 
-        // Получаем быстрые данные: Foursquare + OSM транспорт параллельно
-        const [osmPOI, foursquarePOI] = await Promise.all([
-          getPOINearby(lat, lon, radius).catch(err => {
-            console.error('[OSM] Error, skipping:', err.message);
-            return { transport: [], schools: [], shops: [] };
-          }),
-          getFoursquarePOI(lat, lon, radius)
-        ]);
+        // Используем только Foursquare для скорости (OSM слишком медленный)
+        const foursquarePOI = await getFoursquarePOI(lat, lon, radius);
 
-        // Формируем результат с топ-3 транспорта
+        // Формируем результат БЕЗ транспорта (будет загружаться отдельно по запросу)
         const poi = {
-          transport: (osmPOI.transport || []).slice(0, 3), // Топ-3 остановки
-          schools: [],   // Школы пропускаем для скорости
+          transport: [], // Транспорт отключен для скорости
+          schools: [],
           shops: foursquarePOI.shops || [],
           hospitals: foursquarePOI.hospitals || [],
           services: foursquarePOI.services || []
@@ -101,7 +95,6 @@ exports.handler = async (event, context) => {
 
         // Определяем статус POI
         const hasPOI = 
-          poi.transport.length > 0 ||
           poi.shops.length > 0 ||
           poi.hospitals.length > 0 ||
           poi.services.length > 0;
@@ -111,7 +104,7 @@ exports.handler = async (event, context) => {
         if (!hasPOI) {
           console.log(`[POI] No POI found for address: "${address}" (${lat}, ${lon}) radius: ${radius}m`);
         } else {
-          console.log(`[POI] Found for "${address}": transport:${poi.transport.length} shops:${poi.shops.length} hospitals:${poi.hospitals.length} services:${poi.services.length}`);
+          console.log(`[POI] Found for "${address}": shops:${poi.shops.length} hospitals:${poi.hospitals.length} services:${poi.services.length}`);
         }
 
         results.push({
