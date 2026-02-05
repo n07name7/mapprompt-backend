@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
+  'https://mapprompt-cz.netlify.app',
   process.env.CORS_ORIGIN || 'https://n07name7.github.io'
 ].filter(Boolean);
 
