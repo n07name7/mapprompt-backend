@@ -48,7 +48,7 @@ async function getFoursquarePOI(lat, lon, radius = 1000) {
       params: {
         ll: `${lat},${lon}`,
         radius: radius,
-        limit: 50 // максимум результатов
+        limit: 20 // уменьшили с 50 для скорости
       },
       headers: {
         'Authorization': `Bearer ${FOURSQUARE_API_KEY}`,
@@ -103,10 +103,10 @@ async function getFoursquarePOI(lat, lon, radius = 1000) {
       }
     });
 
-    // Сортируем по расстоянию и берём топ-10
-    result.shops = result.shops.sort((a, b) => a.distance - b.distance).slice(0, 10);
-    result.restaurants = result.restaurants.sort((a, b) => a.distance - b.distance).slice(0, 10);
-    result.services = result.services.sort((a, b) => a.distance - b.distance).slice(0, 10);
+    // Сортируем по расстоянию и берём топ-5 (уменьшили для скорости)
+    result.shops = result.shops.sort((a, b) => a.distance - b.distance).slice(0, 5);
+    result.restaurants = result.restaurants.sort((a, b) => a.distance - b.distance).slice(0, 5);
+    result.services = result.services.sort((a, b) => a.distance - b.distance).slice(0, 5);
 
     // Сохраняем в кэш
     cache.set(cacheKey, { data: result, timestamp: Date.now() });
