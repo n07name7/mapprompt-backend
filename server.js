@@ -14,6 +14,14 @@ const allowedOrigins = [
   process.env.CORS_ORIGIN || 'https://n07name7.github.io'
 ].filter(Boolean);
 
+// TEMPORARY: Allow all origins for testing
+app.use(cors({
+  origin: '*',
+  credentials: false
+}));
+
+/* 
+// TODO: Re-enable strict CORS after Vercel deployment is confirmed
 app.use(cors({
   origin: function(origin, callback) {
     // Разрешить запросы без origin (например, curl или Postman)
@@ -27,6 +35,7 @@ app.use(cors({
     }
   }
 }));
+*/
 
 app.use(express.json());
 
