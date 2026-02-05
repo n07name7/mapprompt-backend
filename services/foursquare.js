@@ -15,7 +15,7 @@ const CATEGORIES = {
   TRANSPORT: ['19046', '19044', '19043', '19042'], // transit, metro, tram, bus
   SCHOOLS: ['12012', '12013', '12014', '12057'], // school, preschool, college, university
   SHOPS: ['17069', '17145', '17001', '17002', '17114'], // supermarket, grocery, mall, convenience, pharmacy
-  RESTAURANTS: ['13002', '13003', '13065'], // restaurant, cafe, fast food
+  HOSPITALS: ['15014', '15015', '15016'], // hospital, clinic, medical center
   SERVICES: ['17114', '17029', '17143'] // pharmacy, bank, ATM
 };
 
@@ -64,7 +64,7 @@ async function getFoursquarePOI(lat, lon, radius = 1000) {
     // Группируем по категориям
     const result = {
       shops: [],
-      restaurants: [],
+      hospitals: [],
       services: [],
       all: [] // для дедупликации
     };
@@ -84,8 +84,8 @@ async function getFoursquarePOI(lat, lon, radius = 1000) {
       
       if (CATEGORIES.SHOPS.includes(categoryId)) {
         result.shops.push(poi);
-      } else if (CATEGORIES.RESTAURANTS.includes(categoryId)) {
-        result.restaurants.push(poi);
+      } else if (CATEGORIES.HOSPITALS.includes(categoryId)) {
+        result.hospitals.push(poi);
       } else if (CATEGORIES.SERVICES.includes(categoryId)) {
         result.services.push(poi);
       } else {
@@ -94,9 +94,9 @@ async function getFoursquarePOI(lat, lon, radius = 1000) {
         if (categoryName.includes('shop') || categoryName.includes('store') || 
             categoryName.includes('market') || categoryName.includes('pharmacy')) {
           result.shops.push(poi);
-        } else if (categoryName.includes('restaurant') || categoryName.includes('cafe') || 
-                   categoryName.includes('food') || categoryName.includes('bakery')) {
-          result.restaurants.push(poi);
+        } else if (categoryName.includes('hospital') || categoryName.includes('clinic') || 
+                   categoryName.includes('medical') || categoryName.includes('doctor')) {
+          result.hospitals.push(poi);
         } else if (categoryName.includes('bank') || categoryName.includes('atm')) {
           result.services.push(poi);
         }
@@ -105,7 +105,7 @@ async function getFoursquarePOI(lat, lon, radius = 1000) {
 
     // Сортируем по расстоянию и берём топ-5 (уменьшили для скорости)
     result.shops = result.shops.sort((a, b) => a.distance - b.distance).slice(0, 5);
-    result.restaurants = result.restaurants.sort((a, b) => a.distance - b.distance).slice(0, 5);
+    result.hospitals = result.hospitals.sort((a, b) => a.distance - b.distance).slice(0, 5);
     result.services = result.services.sort((a, b) => a.distance - b.distance).slice(0, 5);
 
     // Сохраняем в кэш
@@ -120,7 +120,7 @@ async function getFoursquarePOI(lat, lon, radius = 1000) {
     // Возвращаем пустой результат вместо краша
     return {
       shops: [],
-      restaurants: [],
+      hospitals: [],
       services: [],
       all: []
     };

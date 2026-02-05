@@ -95,7 +95,7 @@ exports.handler = async (event, context) => {
           transport: (osmPOI.transport || []).slice(0, 3), // Топ-3 остановки
           schools: [],   // Школы пропускаем для скорости
           shops: foursquarePOI.shops || [],
-          restaurants: foursquarePOI.restaurants || [],
+          hospitals: foursquarePOI.hospitals || [],
           services: foursquarePOI.services || []
         };
 
@@ -103,7 +103,7 @@ exports.handler = async (event, context) => {
         const hasPOI = 
           poi.transport.length > 0 ||
           poi.shops.length > 0 ||
-          poi.restaurants.length > 0 ||
+          poi.hospitals.length > 0 ||
           poi.services.length > 0;
 
         const poiStatus = hasPOI ? 'available' : 'unavailable';
@@ -111,7 +111,7 @@ exports.handler = async (event, context) => {
         if (!hasPOI) {
           console.log(`[POI] No POI found for address: "${address}" (${lat}, ${lon}) radius: ${radius}m`);
         } else {
-          console.log(`[POI] Found for "${address}": transport:${poi.transport.length} shops:${poi.shops.length} restaurants:${poi.restaurants.length} services:${poi.services.length}`);
+          console.log(`[POI] Found for "${address}": transport:${poi.transport.length} shops:${poi.shops.length} hospitals:${poi.hospitals.length} services:${poi.services.length}`);
         }
 
         results.push({
