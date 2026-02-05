@@ -88,14 +88,12 @@ async function getPOINearby(lat, lon, radius = 1000) {
   }
 
   const query = `
-    [out:json][timeout:10];
+    [out:json][timeout:5];
     (
-      node["amenity"="school"](around:${radius},${lat},${lon});
-      node["shop"="supermarket"](around:${radius},${lat},${lon});
       node["public_transport"="stop_position"](around:${radius},${lat},${lon});
       node["highway"="bus_stop"](around:${radius},${lat},${lon});
       node["railway"="station"](around:${radius},${lat},${lon});
-      node["railway"="halt"](around:${radius},${lat},${lon});
+      node["railway"="tram_stop"](around:${radius},${lat},${lon});
     );
     out body;
   `;
@@ -106,8 +104,8 @@ async function getPOINearby(lat, lon, radius = 1000) {
     
     const result = {
       transport: extractPOI(elements, lat, lon, ['public_transport', 'highway', 'railway']),
-      schools: extractPOI(elements, lat, lon, ['amenity'], 'school'),
-      shops: extractPOI(elements, lat, lon, ['shop'], 'supermarket')
+      schools: [],
+      shops: []
     };
 
     // Сохраняем в кэш

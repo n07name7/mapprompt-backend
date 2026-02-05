@@ -81,12 +81,18 @@ exports.handler = async (event, context) => {
       if (geocodeResult.status === 'success') {
         const { lat, lon } = geocodeResult.data;
 
-        // Используем только Foursquare для скорости (OSM Overpass медленный)
-        const foursquarePOI = await getFoursquarePOI(lat, lon, radius);
+        // Получаем быстрые данные: Foursquare + OSM транспорт параллельно
+        const [osmPOI, foursquarePOI] = await Promise.all([
+          getPOINearby(lat, lon, radius).catch(err => {
+            console.error('[OSM] Error, skipping:', err.message);
+            return { transport: [], schools: [], shops: [] };
+          }),
+          getFoursquarePOI(lat, lon, radius)
+        ]);
 
-        // Формируем результат без OSM (ускорение)
+        // Формируем результат с топ-3 транспорта
         const poi = {
-          transport: [], // Транспорт пропускаем для скорости
+          transport: (osmPOI.transport || []).slice(0, 3), // Топ-3 остановки
           schools: [],   // Школы пропускаем для скорости
           shops: foursquarePOI.shops || [],
           restaurants: foursquarePOI.restaurants || [],
@@ -95,6 +101,7 @@ exports.handler = async (event, context) => {
 
         // Определяем статус POI
         const hasPOI = 
+          poi.transport.length > 0 ||
           poi.shops.length > 0 ||
           poi.restaurants.length > 0 ||
           poi.services.length > 0;
@@ -104,7 +111,7 @@ exports.handler = async (event, context) => {
         if (!hasPOI) {
           console.log(`[POI] No POI found for address: "${address}" (${lat}, ${lon}) radius: ${radius}m`);
         } else {
-          console.log(`[POI] Found for "${address}": shops:${poi.shops.length} restaurants:${poi.restaurants.length} services:${poi.services.length}`);
+          console.log(`[POI] Found for "${address}": transport:${poi.transport.length} shops:${poi.shops.length} restaurants:${poi.restaurants.length} services:${poi.services.length}`);
         }
 
         results.push({
