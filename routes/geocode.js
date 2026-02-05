@@ -1,8 +1,34 @@
 const express = require('express');
 const { geocodeAddress } = require('../services/nominatim');
 const { getPOINearby } = require('../services/overpass');
+const { getFoursquarePOI, deduplicatePOI } = require('../services/foursquare');
 
 const router = express.Router();
+
+/**
+ * Объединить POI из разных источников
+ */
+function mergePOI(osmPOI, foursquarePOI) {
+  // Транспорт и школы берём только из OSM (там лучше покрытие для этих категорий)
+  const transport = osmPOI.transport || [];
+  const schools = osmPOI.schools || [];
+
+  // Магазины объединяем из обоих источников (приоритет Foursquare)
+  let shops = [...(foursquarePOI.shops || []), ...(osmPOI.shops || [])];
+  shops = deduplicatePOI(shops).slice(0, 10);
+
+  // Добавляем рестораны и сервисы из Foursquare
+  const restaurants = foursquarePOI.restaurants || [];
+  const services = foursquarePOI.services || [];
+
+  return {
+    transport,
+    schools,
+    shops,
+    restaurants,
+    services
+  };
+}
 
 /**
  * POST /api/geocode
@@ -30,19 +56,31 @@ router.post('/', async (req, res) => {
       const geocodeResult = await geocodeAddress(address);
 
       if (geocodeResult.status === 'success') {
-        // Получаем POI вокруг найденной точки с указанным радиусом
-        const poi = await getPOINearby(
-          geocodeResult.data.lat,
-          geocodeResult.data.lon,
-          radius
-        );
+        const { lat, lon } = geocodeResult.data;
+
+        // Получаем POI из обоих источников параллельно
+        const [osmPOI, foursquarePOI] = await Promise.all([
+          getPOINearby(lat, lon, radius),
+          getFoursquarePOI(lat, lon, radius)
+        ]);
+
+        // Объединяем результаты
+        const poi = mergePOI(osmPOI, foursquarePOI);
 
         // Определяем статус POI
-        const hasPOI = poi.transport.length > 0 || poi.schools.length > 0 || poi.shops.length > 0;
+        const hasPOI = 
+          poi.transport.length > 0 || 
+          poi.schools.length > 0 || 
+          poi.shops.length > 0 ||
+          poi.restaurants.length > 0 ||
+          poi.services.length > 0;
+
         const poiStatus = hasPOI ? 'available' : 'unavailable';
 
         if (!hasPOI) {
-          console.log(`[POI] No POI found for address: "${address}" (${geocodeResult.data.lat}, ${geocodeResult.data.lon}) radius: ${radius}m`);
+          console.log(`[POI] No POI found for address: "${address}" (${lat}, ${lon}) radius: ${radius}m`);
+        } else {
+          console.log(`[POI] Found for "${address}": transport:${poi.transport.length} schools:${poi.schools.length} shops:${poi.shops.length} restaurants:${poi.restaurants.length} services:${poi.services.length}`);
         }
 
         results.push({
